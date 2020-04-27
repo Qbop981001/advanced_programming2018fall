@@ -1,0 +1,60 @@
+1.
+函数模板显式实例化
+	max<double>(x,m); 
+或 
+	max<int>(x,m);
+2.
+除了类型参数外，函数模板也可以带有非类型参数，使用时需要显式实例化。例如：
+
+template <class T, int size> //size为一个int型的普通参数
+void f(T a)
+{	T temp[size];
+	......  
+}
+......
+f<int,10>(1);  //调用模板函数f(int a)，其中的size为10 
+3.
+类模板中的静态成员仅属于实例化后的类（模板类），不同类模板实例之间不共享类模板中的静态成员。例如：
+template <class T>
+class A
+{		static int x;
+		T y;
+		......
+};
+template <class T> int A<T>::x=0;
+......
+A<int> a1,a2; //a1和a2共享一个x。
+A<double> a3,a4; //a3和a4共享另一个x。 
+4.
+实例化一定要见到相应的源代码，否则无法实例化！
+   S<int> s2; //实例化“S<int>”并创建该类的一个对象s2 
+   s2.f(); //没有实例化“void S<int>::f()”但调用之
+               //Error，连接程序将指出该实例不存在！
+解决上述问题的通常做法是把模板的定义和实现都放在头文件中。
+5.
+关于类模板的友元
+template <class T> class A;
+template <class T> void f3(A<T>& a) { ... }
+template class<T>
+class A
+{ T x,y;
+  ......
+  friend void f1(A<T>& a); //友元f1不是模板！
+  template <class T1> friend void f2(A<T1>& a); //f2与A多对多实例化
+  friend void f3<T>(A<T>& a); //f3与A一对一实例化(用相同参数类型)
+};
+void f1(A<int>& a) { ... }
+template <class T> void f2(A<T>& a) {...}
+......
+A<int> a1; //实例化A<int>
+A<double> a2; //实例化A<double>
+f1(a1); //OK，调用f1(A<int>&)
+f1(a2); //链接错误! 调用f1(A<double>&)，但它不存在！
+f2(a1); //实例f2<int>是A<int>和A<double>的友元
+f2(a2); //实例f2<double>是A<int>和A<double>的友元
+f3(a1); //实例f3<int>是A<int>的友元，但不是A<double>的友元！
+f3(a2); //实例f3<double>是A<double>的友元，但不是A<int>的友元！
+7.STL各种类型
+8.算法中的自定义操作类型和自定义操作
+9.函数对象？？？？？？？？
+

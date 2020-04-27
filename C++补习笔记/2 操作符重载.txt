@@ -1,0 +1,101 @@
+1.转移构造函数（C++ 11）
+为某个类增加一个转移构造函数
+A(A&& x)
+{
+	p=x.p;
+	x.p=NULL;
+}
+2.
+class Counter 
+{
+	int value;
+public:
+	Counter() { value=0; }
+	Counter& operator++()
+	{
+		value++;
+		return *this;
+	}
+	Counter operator++(int)//临时对象
+	{
+		Counter temp=*this;
+		++(*this);
+		return temp;
+	}
+}
+因此 (++x)++ ++(++x)//OK    (X++)++ ++(X++)//ERROR
+3.赋值操作符
+对于包含成员对象的类来说，自己定义的赋值操作符重载函数不会自动地调用成员对象的赋值操作符重载函数，
+必须在自己定义的赋值操作符重载函数中显式地指出
+4.转移赋值操作符
+A& operator=(A&& x)
+{
+	if(&x==this) return *this;
+	delete[] p;
+	p=x.p;
+	x.p=NULL;
+	return *this;
+}
+5.重载new实现空间管理
+#include<cstring>
+#include<cstdlib>
+using namespace std;
+const int NUM=32;
+class A
+{		...... //类A的已有成员说明。
+	public:
+		static void *operator new(size_t size);
+		static void operator delete(void *p);
+	private:
+		A *next; //用于组织A类对象自由空间结点的链表。
+		static A *p_free; //用于指向A类对象的自由空间链表头。
+};
+A *A :: p_free=NULL;
+void *A::operator new(size_t size)
+{	A *p;
+	if (p_free == NULL)
+	{	//申请NUM个A类对象的大空间。
+	  p_free = (A *)malloc(size*NUM);  
+		//在大空间上建立自由结点链表。
+		for (p=p_free; p!=p_free+NUM-1; p++)  
+		   p->next = p+1;
+		p->next = NULL;
+	}
+   //从链表中给当前对象分配空间
+	p = p_free;
+	p_free = p_free->next;
+	memset(p,0,size);
+	return p;
+}
+A *q=new A;
+void A::operator delete(void *p)
+{	((A *)p)->next = p_free;
+	p_free = (A *)p;
+}
+A *q1=new A;
+A *q2=new A;
+delete q1;
+6.智能指针类
+class B  //智能指针类
+{		A *p_a;
+		int count;
+	public:
+		B(A *p) 
+		{	p_a = p; count = 0; 
+		}
+		A *operator ->()  //操作符“->”的重载函数
+		{	count++;  return p_a; 
+		}
+		int num_of_a_access() const
+		{	return count; 
+		}
+};
+void func(B &p)
+{  ...... p->f(); ...... p->g(); ......
+}
+//p->f(); //等价于：p.operator->()->f(); 
+7.自定义类型转换操作符
+类中带一个参数的构造函数可以用作从其它类型到该类的转换。 
+或者，operator int() { return x+y; }
+也可以通过给A类的构造函数A(int i)加上一个修饰符explicit，禁止把它当作隐式类型转换符来用：
+	explicit A(int i) //禁止把它当作隐式类型转换符来用。 

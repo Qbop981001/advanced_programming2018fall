@@ -1,0 +1,119 @@
+1.
+派生类除了拥有新定义的成员外，还拥有基类的所有成员（基类的构造函数和赋值操作符重载函数除外）。
+定义派生类时一定要见到基类的定义。
+用protected说明的成员不能通过对象使用，但可以在派生类中使用。
+public：对象的使用者（类的实例用户）
+public+protected：派生类
+2.
+class B: public A
+{		int z;
+  public:
+		void f();
+		void h()
+		{	f();  //B类中的f
+			A::f();  //A类中的f
+		}
+};
+class B: public A
+{		int z;
+	public:
+		void f(int); //不是重载A的f！ 
+		void h() 
+		{	f(1);  //OK
+			f();  //Error
+			A::f();  //OK
+		}
+};
+class B: public A
+{		int z;
+	public:
+		using A::f;
+		void f(int); 
+		void h() 
+		{	f(1);  //OK
+			f();  //OK，等价于A::f();
+		}
+};
+2.如果一个类D既有基类B、又有成员对象类M，则
+在创建D类对象时，构造函数的执行次序为：
+B->M->D
+当D类的对象消亡时，析构函数的执行次序为：
+D->M->B
+3.派生类自定义的赋值操作符重载函数不会自动调用基类的赋值操作，需要在自定义的赋值操作符重载函数中显式地指出。
+B& operator =(const B& b)
+		{	if (&b == this) return *this;  //防止自身赋值。
+			 *(A*)this = b; //调用基类的赋值操作符对基类成员
+						          //进行赋值。也可写成： 
+						          //this->A::operator =(b); 
+			...... //对派生类的成员赋值
+			return *this;
+		}
+4.静态绑定编译时刻决定 动态绑定用虚函数实现，前面加virtual ，运行时刻确定
+5.
+只有类的成员函数才可以是虚函数，但静态成员函数不能是虚函数。
+构造函数不能是虚函数，析构函数可以（往往）是虚函数。注：p = new B;  //调用B::B(), A::A()和A::f
+.......
+delete p;  //只调用A::~A()，不调用B:~B()
+               //为什么？
+                 //没有把A的析构函数定义为虚函数！
+
+
+只有通过基类的指针或引用访问基类的虚函数时才进行动态绑定。
+基类的构造函数中对虚函数的调用不进行动态绑定。（为什么？）
+原因：创建派生类对象时，基类构造函数先于派生类构造函数体执行，如果动态绑定了，调用了派生类成员函数，
+会导致对未初始化的派生类对象进行操作，不行。
+6.
+class A
+{	      .......
+   public:
+		virtual void f();
+};
+class B: public A
+{	      ......
+    public:
+		void f(); 
+		void g(); 
+};
+A *p=new B;
+......
+p->f(); //OK
+p->g(); //Error
+((B *)p)->g(); //OK，不安全！
+B *q=dynamic_cast<B *>(p);
+if (q != NULL) q->g();
+7.
+//A.h （类A的对外接口）
+class A
+{	int i,j;
+  public:
+	A();
+	A(int x,int y);
+	void f(int x);
+};
+//B.cpp （A类对象的某个使用者）
+#include "A.h"
+void func(A *p)  //绕过对象类的访问控制！
+{	p->f(2); //Ok
+	p->i = 1; //Error
+	p->j = 2; //Error
+	*((int *)p) = 1; //Ok，访问p所指向的对象的成员i
+	*((int *)p+1) = 2; //Ok，访问p所指向的对象的成员j
+}
+抽象类I_A给类A提供一个抽象接口
+//I_A.h （类A的对外接口）
+class I_A
+{ public:
+   	  virtual void f(int)=0;
+};
+
+//B.cpp （A类对象的某个使用者）
+#include "I_A.h"
+void func(I_A *p)
+{	p->f(2);  //Ok
+	......  //这里不知道p所指向的对象有哪些数据成员，
+		   //因此，无法访问它的数据成员
+}
+8.虚函数动态绑定的实现
+虚基类的实现（x移到最后，在原来x的位置存储一个x的偏移量指针）
+
+
